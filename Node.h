@@ -6,12 +6,10 @@
 #define BEACON 0
 #define PING 1
 #define DATA 2
-#define TEST 3
 
 // Periodicity
 #define BEACON_PERIOD 128 // Beacon period in seconds
 #define PING_PERIOD 8 // Ping period in seconds
-#define DATA_PERIOD 20 // Data period in seconds
 
 component Node : public TypeII
 {
@@ -29,6 +27,7 @@ component Node : public TypeII
 		int nodes;
 		int seed;
 		int collectTraces;
+		
 		float positionX;
 		float positionY;
 		Packet NewPacket(int type);
@@ -71,7 +70,6 @@ component Node : public TypeII
 			connect superframe.to_component,Beacon;
 			connect ping.to_component,Ping;
 			connect data.to_component,Data;
-			connect test.to_component,Test;
 		}
 };
 
