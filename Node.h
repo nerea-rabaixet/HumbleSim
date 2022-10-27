@@ -23,8 +23,8 @@ component Node : public TypeII
 		int id;
 		int isGateway;
 		int Connected; // node is not connected by default
-		int relay; //relay of a given node
-		int to_relay; //to resend data to GW
+		int relay; //relay of an isolated node
+		int relayed; //to resend data to GW
 		int seqNum;
 		int nodes;
 		int seed;
@@ -61,12 +61,10 @@ component Node : public TypeII
 		Timer <trigger_t> superframe; // Triggers the transmission of the next Beacon
 		Timer <trigger_t> ping; // Triggers the transmission of the next Ping
 		Timer <trigger_t> data; // Triggers the transmission of the next Data packet
-		Timer <trigger_t> test; //Treigger the transmission of a Test packet
 
 		inport void Beacon(trigger_t& t1);
 		inport void Ping(trigger_t& t2);
 		inport void Data(trigger_t& t3);
-		inport void Test(trigger_t& t4);
 
 		Node()
 		{
@@ -155,10 +153,10 @@ void Node :: Ping(trigger_t &)
 void Node :: Data(trigger_t &){
 	if(Connected == 1){
 		Packet packet = NewPacket(DATA);
-		if(to_relay != 0){
+		if(relayed != 0){
 			packet.destination = 0;
 			packet.source = id;
-			packet.iso = to_relay;
+			packet.iso = relayed;
 		}
 		
 		Tx(packet);
@@ -179,12 +177,7 @@ void Node :: Data(trigger_t &){
 	sprintf(msg,"%f - Node %d: I transmitted a Data packet",SimTime(),id);
 	if (collectTraces) Trace(msg);
 };
-void Node :: Test(trigger_t &){
-	Packet packet = NewPacket(TEST);
-	Tx(packet);
-	sprintf(msg,"%f - Node %d: I send TEST packet to the channel ",SimTime(),id);
-	if (collectTraces) Trace(msg);
-}
+
 
 // This function filters the received packets.
 // We decide either to use a packet or drop it!
@@ -220,9 +213,6 @@ void Node :: Rx(Packet &packet)
 
 					data.Set(SimTime()); // Schedules the transmission of the data packet
 				}
-				if(packet.type == TEST){
-					is_busy = packet.isBusy;
-				}
 				else {
 					if (packet.type == DATA){
 					receivedData++;
@@ -231,10 +221,10 @@ void Node :: Rx(Packet &packet)
 					}
 				//check if it needs to be relayed to GW
 					if (packet.relay == id && id != 0){
-					to_relay = packet.iso; // we set the packet to be directed to GW
+					relayed = packet.iso; // we set the packet to be directed to GW
 					int random_value = rand()%10;
-					data.Set(SimTime()+random_value);
-					packetRelayed++;
+					data.Set(SimTime()+random_value); //send Data packet forwarded to Node 0 (GW)
+					packetRelay++;
 					sprintf(msg,"%f - Node %d: I RELAY received packet from Node %d, I will forward it to GW.",SimTime(),id,packet.source);
 					if (collectTraces) Trace(msg);
 					transmittedData++;
@@ -242,16 +232,15 @@ void Node :: Rx(Packet &packet)
 				}
 			}
 			// This packet is not for me :(
-			else if(Connected == 0){
-				//if it is not connected then we sent are the relay so we send packet to Gateway.
+			else if(Connected == 0){ //Node is isolated and receves a Data packet
+				
 				relay = packet.source; //indicate the relay to use
 				int random_value = rand()%10;
-				data.Set(SimTime()+random_value);
-				packetRelay++;
+				data.Set(SimTime()+random_value); //send packet to the Relay Node.
+				packetRelayed++;
 				sprintf(msg,"%f - Node %d: I received a packet from Node %d, I ask him to Relay me.",SimTime(),id,packet.source);
 				if (collectTraces) Trace(msg);
 				transmittedData++;
-
 
 			}
 			else {
