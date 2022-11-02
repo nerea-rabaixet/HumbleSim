@@ -1,0 +1,2 @@
+./COST/cxx HumbleSim.cc
+g++ -Wall -o HumbleSim HumbleSim.cxx
