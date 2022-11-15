@@ -10,6 +10,7 @@
 #define PING 1
 #define DATA 2
 #define SENSE 3
+#define maxTrans 2
 
 // Periodicity
 #define BEACON_PERIOD 128 // Beacon period in seconds
@@ -235,7 +236,7 @@ void Node :: Rx(Packet &packet)
 				if (collectTraces) Trace(msg);
 
 				// Relaying!
-				if (isRelayingEnabled && !isConnected && packet.destination == 0){
+				if (isRelayingEnabled && !isConnected && packet.destination == 0 && isolatedData < maxTrans){
 					myRelayNode = packet.source; // I want this to be my relay node!
 					sprintf(msg,"%f - Node %d: I will try to transmit to Node %d soon. [relaying]",SimTime(),id,myRelayNode);
 					if (collectTraces) Trace(msg);
