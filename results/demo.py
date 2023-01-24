@@ -15,7 +15,7 @@ def plotLocations(myresults):
    plt.title('Node positions')
    plt.xlabel('x [m]')
    plt.ylabel('y [m]')
-   
+
    plt.tight_layout(pad=1.08) # default: 1.08
    plt.savefig('results_locations.pdf')
 
@@ -25,12 +25,12 @@ def plotResults(myresults):
    print(df) # print the contents of the dataframe
 
    # A bar plot
-   ax = df.plot.bar(x='ID', y={'DataTX'}, rot=0) # plot something
-
+   ax = df.plot.bar(x='ID', y={'DataTX','RelayTX','IsolTX'}, rot=0) # plot DataTX
+   #ax = df.plot.bar(x='ID', y={'RelayTX'}, rot=1) # plot DataTX
    plt.title('My title')
    plt.xlabel('Node ID')
    plt.ylabel('Packets')
-   
+
    plt.tight_layout(pad=1.08) # default: 1.08
    plt.savefig('results_packets.pdf')
 
@@ -38,11 +38,10 @@ def main():
    print('Hello!')
 
    results = '../src/results.csv'
-   
+
    # Set to True to generate a plot
    generatePlot0 = True # plot0
    generatePlot1 = True # plot1
-
    if generatePlot0:
       print('Generating plot0')
       plotLocations(results)
@@ -50,6 +49,7 @@ def main():
    if generatePlot1:
       print('Generating plot1')
       plotResults(results)
+
 
 if __name__ == '__main__':
     main()
