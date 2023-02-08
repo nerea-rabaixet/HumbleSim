@@ -11,11 +11,14 @@ struct Packet
 	int destination;
 	int type;
 	int relayed;
-	
+
 	// Payload
 	double timestamp;
 	int payload;
+	//indicator --> available for relaying
 
 	// NOT INCLUDED IN THE PACKET!
 	int isBusy;
+	//is able to be a Relay
+	int ableToRelay;
 };
