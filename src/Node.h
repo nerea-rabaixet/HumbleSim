@@ -34,6 +34,7 @@ component Node : public TypeII
 		int myRelayNode; // The relay (connected) node
 		int myRelayedNode; // The relayed (disconnected) node
 		int isRelayingEnabled;
+		int RelayNodeIsEnable;
 		float myBackoff;
 		float positionX;
 		float positionY;
@@ -52,8 +53,12 @@ component Node : public TypeII
 		int receivedPings;
 		int receivedData;
 		//relaying info
+		int busyretry; // retries of sensing, set to 0 when it is finaly transmited
 		int isolatedData; // Transmitted data packets from relayed node
+		int isolatedDataperNode;
 		int relayedData; // Transmitted data packets from relay node
+		//max relayed nodes
+
 
 	public:
 		// Connections
@@ -87,7 +92,7 @@ void Node :: Start()
 	seqNum = 0; // This is the sequence number of my first packet
 	myRelayNode = 0;
 	myRelayedNode = 0;
-	myBackoff = 0.001;
+	myBackoff = 0.001; //backoff is that after a collision detection, the devices that were transmitting will transmit a jam signal to inform all hosts that a collision has occurred.
 	isConnected = 0;
 
 	// Statistics!
@@ -98,7 +103,9 @@ void Node :: Start()
 	receivedPings = 0;
 	receivedData = 0;
 	isolatedData = 0;
+	isolatedDataperNode = 0;
 	relayedData = 0;
+
 
 	sprintf(msg,"%f - Node %d: My coordinates are (%f,%f).",SimTime(),id,positionX,positionY);
 	if (collectTraces) Trace(msg);
@@ -122,7 +129,6 @@ void Node :: Beacon(trigger_t &)
 	Packet packet = NewPacket(BEACON);
 	Tx(packet);
 	transmittedBeacons++;
-
 	sprintf(msg,"%f - Node %d: I transmitted a Beacon",SimTime(),id);
 	if (collectTraces) Trace(msg);
 
@@ -163,11 +169,22 @@ void Node :: Data(trigger_t &){
 		packet.destination = myRelayNode;
 		myRelayNode = 0;
 		isolatedData++;
+
+
 	} else if (myRelayedNode != 0) {
 		packet.relayed = myRelayedNode;
 		myRelayedNode = 0;
 		relayedData++;
+		if(isolatedDataperNode < 3){ //when I have relayed at lest 2 packets then I stop tranmitting
+			isolatedDataperNode++;
+			sprintf(msg,"%f - Node %d: My isolated Data per Node is %d.",SimTime(),id,isolatedDataperNode);
+			if (collectTraces) Trace(msg);
+		}
+		else{
+			RelayNodeIsEnable = 0; //resets relaying again = 0;
+		}
 	}
+
 	Tx(packet);
 	transmittedData++;
 
@@ -194,8 +211,11 @@ void Node :: Rx(Packet &packet)
 			if (packet.type == BEACON){
 				receivedBeacons++;
 				isConnected = 1; // If you receive a beacon then you know you are connected
+				RelayNodeIsEnable = 1; //resets relaying again enable
+				isolatedDataperNode = 0;//set again the counter of isolatedDataper Node to 0 so that we can transmit a max of 2 packets.
 				sprintf(msg,"%f - Node %d: I received a Beacon and I am connected!",SimTime(),id);
 				if (collectTraces) Trace(msg);
+
 			}
 			else
 			{
@@ -221,7 +241,7 @@ void Node :: Rx(Packet &packet)
 						if (collectTraces) Trace(msg);
 
 						// Relaying! Check if it needs to be relayed to GW
-						if (id != 0 && packet.destination == id && isConnected){
+						if (id != 0 && packet.destination == id && isConnected && RelayNodeIsEnable == 1){
 							myRelayedNode = packet.source;
 							sprintf(msg,"%f - Node %d: I received a Data packet from Node %d and I will forward it to the GW. [relaying]",SimTime(),id,packet.source);
 							if (collectTraces) Trace(msg);
@@ -235,8 +255,8 @@ void Node :: Rx(Packet &packet)
 				sprintf(msg,"%f - Node %d: I received a packet from Node %d, but it's not for me.",SimTime(),id,packet.source);
 				if (collectTraces) Trace(msg);
 
-				// Relaying!
-				if (isRelayingEnabled && !isConnected && packet.destination == 0 && isolatedData < maxTrans){
+				// I hear someone that has connection to GW I will ask him to be my relay.
+				if (isRelayingEnabled && !isConnected && packet.destination == 0 ){
 					myRelayNode = packet.source; // I want this to be my relay node!
 					sprintf(msg,"%f - Node %d: I will try to transmit to Node %d soon. [relaying]",SimTime(),id,myRelayNode);
 					if (collectTraces) Trace(msg);
@@ -253,7 +273,9 @@ void Node :: Rx(Packet &packet)
 			sprintf(msg,"%f - Node %d: The channel is not busy!",SimTime(),id);
 			if (collectTraces) Trace(msg);
 			data.Set(SimTime());
+			busyretry = 0;
 		} else {
+			busyretry ++;
 			sprintf(msg,"%f - Node %d: The channel is busy!",SimTime(),id);
 			if (collectTraces) Trace(msg);
 		}
