@@ -12,7 +12,7 @@ using namespace std;
 component HumbleSim : public CostSimEng
 {
 	public:
-		void Setup(int nodes, int seed, int collectTraces, int isRelayingEnabled);
+		void Setup(int nodes, int seed, int collectTraces, int isRelayingEnabled, int maxNumRelayingperBeacon);
 		void Stop();
 		void Start();
 
@@ -27,7 +27,7 @@ component HumbleSim : public CostSimEng
 		char msg[500];
 };
 
-void HumbleSim:: Setup(int nodes, int seed, int collectTraces, int isRelayingEnabled)
+void HumbleSim:: Setup(int nodes, int seed, int collectTraces, int isRelayingEnabled,int maxNumRelayingperBeacon)
 {
 	node.SetSize(nodes);
 
@@ -64,6 +64,7 @@ void HumbleSim:: Setup(int nodes, int seed, int collectTraces, int isRelayingEna
 		node[i].isRelayingEnabled = isRelayingEnabled;
 		node[i].seed = seed;
 		node[i].application = isRelayingEnabled;
+		node[i].maxNumRelayingperBeacon = maxNumRelayingperBeacon;
 
 		channel.nodePositionX[i] = positionX;
 		channel.nodePositionY[i] = positionY;
@@ -98,9 +99,9 @@ void HumbleSim:: Stop()
 
 int main(int argc, char *argv[])
 {
-	if(argc < 6) 
+	if(argc < 7)
 	{
-		printf("./HumbleSim simTime collectTraces isRelayingEnabled nodes seed\n");
+		printf("./HumbleSim simTime collectTraces isRelayingEnabled nodes seed maxNumRelayingperBeacon\n");
 		return 0;
 	}
 
@@ -109,6 +110,7 @@ int main(int argc, char *argv[])
 	int isRelayingEnabled = atoi(argv[3]);
 	int nodes = atoi(argv[4]);
 	int seed = atoi(argv[5]);
+	int maxNumRelayingperBeacon = atoi(argv[6]);
 
 	HumbleSim sim;
 
@@ -116,7 +118,7 @@ int main(int argc, char *argv[])
 
 	//sim.Seed=(long int)6*rand();
 	sim.StopTime(simTime);
-	sim.Setup(nodes,seed,collectTraces,isRelayingEnabled);
+	sim.Setup(nodes,seed,collectTraces,isRelayingEnabled, maxNumRelayingperBeacon);
 	sim.Run();
 
 	return(0);
