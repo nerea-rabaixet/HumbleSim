@@ -10,7 +10,6 @@
 #define PING 1
 #define DATA 2
 #define SENSE 3
-#define maxTrans 2
 
 // Periodicity
 #define BEACON_PERIOD 128 // Beacon period in seconds
@@ -30,6 +29,7 @@ component Node : public TypeII
 		int nodes;
 		int seed;
 		int application;
+		int maxNumRelayingperBeacon; //max number of relaying per beacon period
 		int collectTraces;
 		int myRelayNode; // The relay (connected) node
 		int myRelayedNode; // The relayed (disconnected) node
@@ -165,6 +165,7 @@ void Node :: Ping(trigger_t &)
 // Note that this is triggered by a Timer.
 void Node :: Data(trigger_t &){
 	Packet packet = NewPacket(DATA);
+
 	if (myRelayNode != 0) {
 		packet.destination = myRelayNode;
 		myRelayNode = 0;
@@ -175,7 +176,7 @@ void Node :: Data(trigger_t &){
 		packet.relayed = myRelayedNode;
 		myRelayedNode = 0;
 		relayedData++;
-		if(isolatedDataperNode < 3){ //when I have relayed at lest 2 packets then I stop tranmitting
+		if(isolatedDataperNode < maxNumRelayingperBeacon){ //when I have relayed at lest 2 packets then I stop tranmitting
 			isolatedDataperNode++;
 			sprintf(msg,"%f - Node %d: My isolated Data per Node is %d.",SimTime(),id,isolatedDataperNode);
 			if (collectTraces) Trace(msg);
@@ -184,7 +185,7 @@ void Node :: Data(trigger_t &){
 			RelayNodeIsEnable = 0; //resets relaying again = 0;
 		}
 	}
-
+	packet.ableToRelay = RelayNodeIsEnable; //0 if the Node is not able to relay more packets.
 	Tx(packet);
 	transmittedData++;
 
@@ -256,7 +257,7 @@ void Node :: Rx(Packet &packet)
 				if (collectTraces) Trace(msg);
 
 				// I hear someone that has connection to GW I will ask him to be my relay.
-				if (isRelayingEnabled && !isConnected && packet.destination == 0 ){
+				if (isRelayingEnabled && !isConnected && packet.destination == 0 && packet.ableToRelay != 0){
 					myRelayNode = packet.source; // I want this to be my relay node!
 					sprintf(msg,"%f - Node %d: I will try to transmit to Node %d soon. [relaying]",SimTime(),id,myRelayNode);
 					if (collectTraces) Trace(msg);
@@ -311,6 +312,7 @@ Packet Node :: NewPacket(int type) {
 			packet.relayed = 0;
 			packet.type = DATA;
 			packet.timestamp = SimTime();
+			packet.ableToRelay = 1;
 			break;
 		case SENSE:
 			packet.seq = 0;
