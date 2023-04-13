@@ -23,10 +23,16 @@ void Logger :: Start()
 {
 	fileTraces = fopen(filenameTraces, "w"); // To clear the contents
 	fclose(fileTraces);
-
-	fileResults = fopen(filenameResults, "w"); // To clear the contents
-	fprintf(fileResults,"Seed,App,ID,PosX,PosY,BeacTX,BeacRX,PingTX,PingRX,DataTX,DataRX,IsolTX,RelayTX\n");
-	fclose(fileResults);
+	
+	fileResults = fopen(filenameResults, "r");
+    if (fileResults != NULL) {  // File exists, open in append mode
+        fclose(fileResults);
+        fileResults = fopen(filenameResults, "a");
+    } else {  // File does not exist, open in write mode and write header
+        fileResults = fopen(filenameResults, "w");
+        fprintf(fileResults,"Seed,App,ID,PosX,PosY,BeacTX,BeacRX,PingTX,PingRX,DataTX,DataRX,IsolTX,RelayTX\n");
+    }
+    fclose(fileResults);
 };
 
 void Logger :: Stop()
