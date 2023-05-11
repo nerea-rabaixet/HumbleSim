@@ -12,7 +12,7 @@
 #define SENSE 3
 
 // Periodicity
-#define BEACON_PERIOD 128 // Beacon period in seconds
+#define BEACON_PERIOD 128 // Beacon period in seconds/ maybe should depend on num of nodes
 #define PING_PERIOD 16 // Ping period in seconds
 
 component Node : public TypeII
@@ -23,7 +23,7 @@ component Node : public TypeII
 
 	public:
 		int id;
-		int isGateway;
+		int isGateway;	// in this sim Gateway = Node 0
 		int isConnected; // A node considers itself connected when it receives a beacon
 		int seqNum; // Sequence number
 		int nodes;
@@ -38,7 +38,7 @@ component Node : public TypeII
 		float myBackoff;
 		float positionX;
 		float positionY;
-		Packet NewPacket(int type);
+		Packet NewPacket(int type); //create new packet
 
 	private:
 		char msg[500];
@@ -89,11 +89,12 @@ component Node : public TypeII
 
 void Node :: Start()
 {
+	//initial values
 	seqNum = 0; // This is the sequence number of my first packet
 	myRelayNode = 0;
 	myRelayedNode = 0;
 	myBackoff = 0.001; //backoff is that after a collision detection, the devices that were transmitting will transmit a jam signal to inform all hosts that a collision has occurred.
-	isConnected = 0;
+	isConnected = 0; //all nodes are initially set as not connected
 
 	// Statistics!
 	transmittedBeacons = 0;
@@ -106,7 +107,6 @@ void Node :: Start()
 	isolatedDataperNode = 0;
 	relayedData = 0;
 
-
 	sprintf(msg,"%f - Node %d: My coordinates are (%f,%f).",SimTime(),id,positionX,positionY);
 	if (collectTraces) Trace(msg);
 
@@ -117,46 +117,37 @@ void Node :: Start()
 
 void Node :: Stop()
 {
-	printf("%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n",seed,application,id,(int)positionX,(int)positionY,transmittedBeacons,receivedBeacons,transmittedPings,receivedPings,transmittedData,receivedData,isolatedData,relayedData);
-	sprintf(msg,"%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d",seed,application,id,(int)positionX,(int)positionY,transmittedBeacons,receivedBeacons,transmittedPings,receivedPings,transmittedData,receivedData,isolatedData,relayedData);
+	//print Statistics
+	printf("%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n",seed,nodes,id,(int)positionX,(int)positionY,transmittedBeacons,receivedBeacons,transmittedPings,receivedPings,transmittedData,receivedData,isolatedData,relayedData);
+	sprintf(msg,"%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d",seed,nodes,id,(int)positionX,(int)positionY,transmittedBeacons,receivedBeacons,transmittedPings,receivedPings,transmittedData,receivedData,isolatedData,relayedData);
 	Result(msg);
 };
 
 // Transmission of a Beacon packet.
 // Note that this is triggered by a Timer.
-void Node :: Beacon(trigger_t &)
-{
-	Packet packet = NewPacket(BEACON);
+void Node :: Beacon(trigger_t &){
+	Packet packet = NewPacket(BEACON); //create packet type Beacon
 	Tx(packet);
 	transmittedBeacons++;
 	sprintf(msg,"%f - Node %d: I transmitted a Beacon",SimTime(),id);
 	if (collectTraces) Trace(msg);
-
 	superframe.Set(SimTime()+BEACON_PERIOD); // Schedules the next Beacon
-
 	pings = 0;
 	maxPings = BEACON_PERIOD/PING_PERIOD - 1;
-
 	ping.Set(SimTime()+PING_PERIOD); // Schedules the next Ping
 };
 
 // Transmission of a Ping packet.
 // Note that this is triggered by a Timer.
-void Node :: Ping(trigger_t &)
-{
+void Node :: Ping(trigger_t &){
 	pings++;
-
-	if (pings < maxPings)
-	{
-		Packet packet = NewPacket(PING);
-		packet.destination = 1+Random(nodes-1);
-
+	if (pings < maxPings){
+		Packet packet = NewPacket(PING); //create packet type Ping
+		packet.destination = 1+Random(nodes-1); //assign destination at random
 		Tx(packet);
 		transmittedPings++;
-
 		sprintf(msg,"%f - Node %d: I transmitted a Ping to Node %d.",SimTime(),id,packet.destination);
 		if (collectTraces) Trace(msg);
-
 		ping.Set(SimTime()+PING_PERIOD); // Schedules the next Ping
 	}
 };
@@ -165,19 +156,18 @@ void Node :: Ping(trigger_t &)
 // Note that this is triggered by a Timer.
 void Node :: Data(trigger_t &){
 	Packet packet = NewPacket(DATA);
-
-	if (myRelayNode != 0) {
-		packet.destination = myRelayNode;
+	if (myRelayNode != 0) {	//If I have a RelayNode
+		packet.destination = myRelayNode; //destinatio is the Relay
 		myRelayNode = 0;
 		isolatedData++;
 
-
-	} else if (myRelayedNode != 0) {
+	} else if (myRelayedNode != 0) { // If I am the relay of another node
 		packet.relayed = myRelayedNode;
 		myRelayedNode = 0;
-		relayedData++;
+
 		if(isolatedDataperNode < maxNumRelayingperBeacon){ //when I have relayed at lest 2 packets then I stop tranmitting
 			isolatedDataperNode++;
+			relayedData++;
 			sprintf(msg,"%f - Node %d: My isolated Data per Node is %d.",SimTime(),id,isolatedDataperNode);
 			if (collectTraces) Trace(msg);
 		}
