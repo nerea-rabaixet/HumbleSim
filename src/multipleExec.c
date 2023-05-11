@@ -19,7 +19,8 @@ int main(void) {
     fprintf(fp, "i,result\n");
 
     // Execute shell command for values of i from 1 to 10
-    for (i = 1; i <= 10; i++) {
+    for (i = 10; i <= 100; i+=10) {
+      for(int j=1;j<=100;j++){
         // Acquire lock on CSV file
         fd = fileno(fp);
         lock = flock(fd, LOCK_EX);
@@ -29,7 +30,9 @@ int main(void) {
         }
 
         // Execute shell command and read result
-        sprintf(cmd, "./HumbleSim 1000 1 1 10 %d 2 > temp.txt", i);
+
+        sprintf(cmd, "./HumbleSim 3600 1 0 %d %d 1 > temp.txt", i, j);
+        printf("./HumbleSim 3600 1 1 %d %d 1 \n", i,j);
         status = system(cmd);
         if (status != 0) {
             printf("Error executing command!\n");
@@ -57,10 +60,13 @@ int main(void) {
         }
 
         // Print result to console
-        printf("Result for i=%d: %s", i, result);
+        printf("Result for i=%d and j=%d: %s", i, j,result);
 
         // Free result buffer
         free(result);
+
+      }
+
     }
 
     // Close CSV file
