@@ -58,6 +58,7 @@ void HumbleSim:: Setup(int nodes, int seed, int collectTraces, int isRelayingEna
 
 		node[i].id = i;
 		node[i].isGateway = 0;
+		node[i].nodes = nodes;
 		node[i].positionX = positionX;
 		node[i].positionY = positionY;
 		node[i].collectTraces = collectTraces;
