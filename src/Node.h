@@ -22,19 +22,19 @@ component Node : public TypeII
 		void Stop();
 
 	public:
-		int id;
-		int isGateway;	// in this sim Gateway = Node 0
+		int id; // Number of Node
+		int isGateway;	// In this sim Gateway = Node 0
 		int isConnected; // A node considers itself connected when it receives a beacon
 		int seqNum; // Sequence number
-		int nodes;
+		int nodes; // Number of nodes in the network
 		int seed;
 		int application;
 		int maxNumRelayingperBeacon; //max number of relaying per beacon period
-		int collectTraces;
+		int collectTraces; //Collect trances Flag
 		int myRelayNode; // The relay (connected) node
 		int myRelayedNode; // The relayed (disconnected) node
-		int isRelayingEnabled;
-		int RelayNodeIsEnable;
+		int isRelayingEnabled; //Relaying sistem Flag
+		int RelayNodeIsEnable; // Relating node Flag
 		float myBackoff;
 		float positionX;
 		float positionY;
@@ -165,13 +165,13 @@ void Node :: Data(trigger_t &){
 		packet.relayed = myRelayedNode;
 		myRelayedNode = 0;
 
-		if(isolatedDataperNode < maxNumRelayingperBeacon){ //when I have relayed at lest 2 packets then I stop tranmitting
+		if(isolatedDataperNode < maxNumRelayingperBeacon){ // I relay maxNumRelayingperBeacon then I stop tranmitting
 			isolatedDataperNode++;
 			relayedData++;
 			sprintf(msg,"%f - Node %d: My isolated Data per Node is %d.",SimTime(),id,isolatedDataperNode);
 			if (collectTraces) Trace(msg);
 		}
-		else{
+		else{ // When I have relayed maxNumRelayingperBeacon then I stop tranmitting and set Relay Node Flag to 0
 			RelayNodeIsEnable = 0; //resets relaying again = 0;
 		}
 	}
@@ -192,9 +192,7 @@ void Node :: Sense(trigger_t &){
 // We decide either to use a packet or drop it!
 void Node :: Rx(Packet &packet)
 {
-	// Is this packet for me?
-
-	// First, let's check that it was not transmitted by me!
+	// Check that the packet was not transmitted by me!
 	if (id != packet.source){
 
 		// If the packet is broadcasted, then let's check what it is about!
@@ -202,37 +200,37 @@ void Node :: Rx(Packet &packet)
 			if (packet.type == BEACON){
 				receivedBeacons++;
 				isConnected = 1; // If you receive a beacon then you know you are connected
-				RelayNodeIsEnable = 1; //resets relaying again enable
-				isolatedDataperNode = 0;//set again the counter of isolatedDataper Node to 0 so that we can transmit a max of 2 packets.
+				RelayNodeIsEnable = 1; // Resets relaying again enable
+				isolatedDataperNode = 0; //Set counter of isolated Data per Node to 0 so that we can transmit a max of 1 packet.
 				sprintf(msg,"%f - Node %d: I received a Beacon and I am connected!",SimTime(),id);
 				if (collectTraces) Trace(msg);
 
 			}
-			else
-			{
+			else{
 				sprintf(msg,"%f - Node %d: I received an unknown broadcasted packet.",SimTime(),id);
 				if (collectTraces) Trace(msg);
 			}
 		}
-		// What if the packet is not broadcasted?
+		// Not broadcasted packet
 		else{
-			// This packet is for me!
+			// Packet destination is me
 			if (packet.destination == id){
+				// RX PING packet
 				if (packet.type == PING){
 					receivedPings++;
 					sprintf(msg,"%f - Node %d: I received a Ping from Node %d.",SimTime(),id,packet.source);
 					if (collectTraces) Trace(msg);
 					data.Set(SimTime()); // Schedules the transmission of the data packet
 				}
-
+				//RX DATA packet
 				else {
 					if (packet.type == DATA){
 						receivedData++;
 						sprintf(msg,"%f - Node %d: I received a Data packet from Node %d.",SimTime(),id,packet.source);
 						if (collectTraces) Trace(msg);
 
-						// Relaying! Check if it needs to be relayed to GW
-						if (id != 0 && packet.destination == id && isConnected && RelayNodeIsEnable == 1){
+						// Packet needs relaying to GW
+						if (id != 0 && packet.destination == id && isConnected && RelayNodeIsEnable == 1){ // Check conditions to relay
 							myRelayedNode = packet.source;
 							sprintf(msg,"%f - Node %d: I received a Data packet from Node %d and I will forward it to the GW. [relaying]",SimTime(),id,packet.source);
 							if (collectTraces) Trace(msg);
@@ -241,13 +239,13 @@ void Node :: Rx(Packet &packet)
 					}
 				}
 			}
-			// This packet is not for me :(
+			// Packet destination is not for me (OVERHEARING)
 			else {
 				sprintf(msg,"%f - Node %d: I received a packet from Node %d, but it's not for me.",SimTime(),id,packet.source);
 				if (collectTraces) Trace(msg);
 
-				// I hear someone that has connection to GW I will ask him to be my relay.
-				if (isRelayingEnabled && !isConnected && packet.destination == 0 && packet.ableToRelay != 0){
+				// Isolated node OVERHEARING Connected node able to relay
+				if (isRelayingEnabled && !isConnected && packet.destination == 0 && packet.ableToRelay != 0){ // Check conditions to ask relaying
 					myRelayNode = packet.source; // I want this to be my relay node!
 					sprintf(msg,"%f - Node %d: I will try to transmit to Node %d soon. [relaying]",SimTime(),id,myRelayNode);
 					if (collectTraces) Trace(msg);
@@ -259,6 +257,7 @@ void Node :: Rx(Packet &packet)
 
 	// Here, we receive an answer from the channel (whether it's busy or not).
 	// This is not a real transmission!
+	// RX SENSE packet
 	if(id == packet.source && packet.type == SENSE){
 		if(packet.isBusy == 0) {
 			sprintf(msg,"%f - Node %d: The channel is not busy!",SimTime(),id);
