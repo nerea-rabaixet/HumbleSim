@@ -90,7 +90,7 @@ void HumbleSim:: Setup(int nodes, int seed, int collectTraces, int isRelayingEna
 void HumbleSim:: Start()
 {
 	printf("--- Started ---------------------------------------------------------------\n");
-	printf("Seed\tApp\tID\tPosX\tPosY\tBeacTX\tBeacRX\tPingTX\tPingRX\tDataTX\tDataRX\tIsolTX\tRelayTX\n");
+	printf("Seed\tApp\tID\tPosX\tPosY\tBeacTX\tBeacRX\tPingTX\tPingRX\tDataTX\tDataRX\tIsolTX\tRelayTX\tDropped\n");
 };
 
 void HumbleSim:: Stop()
