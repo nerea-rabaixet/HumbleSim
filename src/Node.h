@@ -184,21 +184,8 @@ void Node :: Data(trigger_t &){
 			myRelayNode = 0;
 			isolatedData++;
 
-		} else if (myRelayedNode != 0) { // If I am the relay of another node
-			packet.relayed = myRelayedNode;
-			myRelayedNode = 0;
-
-			if(isolatedDataperNode < maxNumRelayingperBeacon){ // I relay maxNumRelayingperBeacon then I stop tranmitting
-				isolatedDataperNode++;
-				relayedData++;
-				sprintf(msg,"%f - Node %d: My isolated Data per Node is %d.",SimTime(),id,isolatedDataperNode);
-				if (collectTraces) Trace(msg);
-			}
-			else{ // When I have relayed maxNumRelayingperBeacon then I stop tranmitting and set Relay Node Flag to 0
-				RelayNodeIsEnable = 0; //resets relaying again = 0;
-			}
 		}
-		packet.ableToRelay = RelayNodeIsEnable; //0 if the Node is not able to relay more packets.
+		//packet.ableToRelay = RelayNodeIsEnable; //0 if the Node is not able to relay more packets.
 		Tx(packet);
 		transmittedData++;
 
@@ -219,7 +206,7 @@ void Node :: Sense(trigger_t &){
 void Node :: Generate(trigger_t &){
 
 	Packet packet = NewPacket(DATA);
-	
+
 	// Decide if the packet should be buffered or dropped
 	if (queue.QueueSize() < maxQueueSize)
 	{
@@ -229,7 +216,7 @@ void Node :: Generate(trigger_t &){
 		sprintf(msg,"%f - Node %d: I added a packet to the buffer.",SimTime(),id);
 		if (collectTraces) Trace(msg);
 	}
-	else 
+	else
 	{
 		droppedPackets++;
 
@@ -284,8 +271,25 @@ void Node :: Rx(Packet &packet)
 						// Packet needs relaying to GW
 						if (id != 0 && packet.destination == id && isConnected && RelayNodeIsEnable == 1){ // Check conditions to relay
 							myRelayedNode = packet.source;
+							if (myRelayedNode != 0) { // If I am the relay of another node
+								packet.relayed = myRelayedNode;
+								myRelayedNode = 0;
+
+								if(isolatedDataperNode < maxNumRelayingperBeacon){ // I relay maxNumRelayingperBeacon then I stop tranmitting
+									isolatedDataperNode++;
+									relayedData++;
+									sprintf(msg,"%f - Node %d: My isolated Data per Node is %d.",SimTime(),id,isolatedDataperNode);
+									if (collectTraces) Trace(msg);
+								}
+								else{ // When I have relayed maxNumRelayingperBeacon then I stop tranmitting and set Relay Node Flag to 0
+									RelayNodeIsEnable = 0; //resets relaying again = 0;
+								}
+							}
+							packet.ableToRelay = RelayNodeIsEnable; //0 if the Node is not able to relay more packets.
+							queue.PutPacket(packet);
 							sprintf(msg,"%f - Node %d: I received a Data packet from Node %d and I will forward it to the GW. [relaying]",SimTime(),id,packet.source);
 							if (collectTraces) Trace(msg);
+
 							data.Set(SimTime()+Exponential(myBackoff));
 						}
 					}
