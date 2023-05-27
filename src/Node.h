@@ -40,6 +40,7 @@ component Node : public TypeII
 		float positionX;
 		float positionY;
 		Packet NewPacket(int type); //create new packet
+		int PutRelayPacketFront; //to put the relaying packet in front of the queue
 
 	private:
 		char msg[500];
@@ -59,7 +60,7 @@ component Node : public TypeII
 		int isolatedDataperNode;
 		int relayedData; // Transmitted data packets from relay node
 		//max relayed nodes
-
+		int latency;
 	public:
 		FIFO queue;
 		double queueSize;
@@ -286,7 +287,13 @@ void Node :: Rx(Packet &packet)
 								}
 							}
 							packet.ableToRelay = RelayNodeIsEnable; //0 if the Node is not able to relay more packets.
-							queue.PutPacket(packet);
+							if(PutRelayPacketFront){
+								queue.PutPacketFront(packet);
+							}
+							else{
+								queue.PutPacket(packet);
+							}
+							
 							sprintf(msg,"%f - Node %d: I received a Data packet from Node %d and I will forward it to the GW. [relaying]",SimTime(),id,packet.source);
 							if (collectTraces) Trace(msg);
 
