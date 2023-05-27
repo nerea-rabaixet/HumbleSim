@@ -12,7 +12,7 @@ using namespace std;
 component HumbleSim : public CostSimEng
 {
 	public:
-		void Setup(int nodes, int seed, int collectTraces, int isRelayingEnabled, int maxNumRelayingperBeacon);
+		void Setup(int nodes, int seed, int collectTraces, int isRelayingEnabled, int maxNumRelayingperBeacon, int PutRelayPacketFront);
 		void Stop();
 		void Start();
 
@@ -27,7 +27,7 @@ component HumbleSim : public CostSimEng
 		char msg[500];
 };
 
-void HumbleSim:: Setup(int nodes, int seed, int collectTraces, int isRelayingEnabled,int maxNumRelayingperBeacon)
+void HumbleSim:: Setup(int nodes, int seed, int collectTraces, int isRelayingEnabled,int maxNumRelayingperBeacon, int PutRelayPacketFront)
 {
 	node.SetSize(nodes);
 
@@ -63,6 +63,7 @@ void HumbleSim:: Setup(int nodes, int seed, int collectTraces, int isRelayingEna
 		node[i].positionY = positionY;
 		node[i].collectTraces = collectTraces;
 		node[i].isRelayingEnabled = isRelayingEnabled;
+		node[i].PutRelayPacketFront = PutRelayPacketFront;
 		node[i].seed = seed;
 		node[i].application = isRelayingEnabled;
 		node[i].maxNumRelayingperBeacon = maxNumRelayingperBeacon;
