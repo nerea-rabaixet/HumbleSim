@@ -60,7 +60,11 @@ component Node : public TypeII
 		int isolatedDataperNode;
 		int relayedData; // Transmitted data packets from relay node
 		//max relayed nodes
-		int latency;
+		int aggregateDelay;
+		float averageLatency;
+		int Latency;
+
+
 	public:
 		FIFO queue;
 		double queueSize;
@@ -137,8 +141,11 @@ void Node :: Start()
 void Node :: Stop()
 {
 	//print Statistics
-	printf("%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n",seed,nodes,id,(int)positionX,(int)positionY,transmittedBeacons,receivedBeacons,transmittedPings,receivedPings,transmittedData,receivedData,isolatedData,relayedData,droppedPackets);
-	sprintf(msg,"%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d",seed,nodes,id,(int)positionX,(int)positionY,transmittedBeacons,receivedBeacons,transmittedPings,receivedPings,transmittedData,receivedData,isolatedData,relayedData,droppedPackets);
+	if(receivedData>0){
+		averageLatency = aggregateDelay/receivedData;
+	}
+	printf("%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%f\n",seed,nodes,id,(int)positionX,(int)positionY,transmittedBeacons,receivedBeacons,transmittedPings,receivedPings,transmittedData,receivedData,isolatedData,relayedData,droppedPackets,averageLatency);
+	sprintf(msg,"%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d %d",seed,nodes,id,(int)positionX,(int)positionY,transmittedBeacons,receivedBeacons,transmittedPings,receivedPings,transmittedData,receivedData,isolatedData,relayedData,droppedPackets,aggregateDelay);
 	Result(msg);
 };
 
@@ -266,6 +273,7 @@ void Node :: Rx(Packet &packet)
 				else {
 					if (packet.type == DATA){
 						receivedData++;
+						aggregateDelay += SimTime() - packet.timestamp;
 						sprintf(msg,"%f - Node %d: I received a Data packet from Node %d.",SimTime(),id,packet.source);
 						if (collectTraces) Trace(msg);
 
@@ -293,7 +301,8 @@ void Node :: Rx(Packet &packet)
 							else{
 								queue.PutPacket(packet);
 							}
-							
+
+							queue.PutPacket(packet);
 							sprintf(msg,"%f - Node %d: I received a Data packet from Node %d and I will forward it to the GW. [relaying]",SimTime(),id,packet.source);
 							if (collectTraces) Trace(msg);
 
