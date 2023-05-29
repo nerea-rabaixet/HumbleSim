@@ -31,8 +31,8 @@ int main(void) {
 
         // Execute shell command and read result
 
-        sprintf(cmd, "./HumbleSim 3600 1 1 %d %d 1 > temp.txt", i, j);
-        printf("./HumbleSim 3600 1 1 %d %d 1 \n", i,j);
+        sprintf(cmd, "./HumbleSim 3600 1 1 %d %d 1 1 > temp.txt", i, j);
+        printf("./HumbleSim 3600 1 1 %d %d 1 1\n", i,j);
         status = system(cmd);
         if (status != 0) {
             printf("Error executing command!\n");
