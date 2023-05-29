@@ -91,7 +91,7 @@ void HumbleSim:: Setup(int nodes, int seed, int collectTraces, int isRelayingEna
 void HumbleSim:: Start()
 {
 	printf("--- Started ---------------------------------------------------------------\n");
-	printf("Seed\tApp\tID\tPosX\tPosY\tBeacTX\tBeacRX\tPingTX\tPingRX\tDataTX\tDataRX\tIsolTX\tRelayTX\tDropped\n");
+	printf("Seed\tApp\tID\tPosX\tPosY\tBeacTX\tBeacRX\tPingTX\tPingRX\tDataTX\tDataRX\tIsolTX\tRelayTX\tDropped\taverageLatency\n");
 };
 
 void HumbleSim:: Stop()
@@ -101,9 +101,9 @@ void HumbleSim:: Stop()
 
 int main(int argc, char *argv[])
 {
-	if(argc < 7)
+	if(argc < 8)
 	{
-		printf("./HumbleSim simTime collectTraces isRelayingEnabled nodes seed maxNumRelayingperBeacon\n");
+		printf("./HumbleSim simTime collectTraces isRelayingEnabled nodes seed maxNumRelayingperBeacon PutRelayPacketFront\n");
 		return 0;
 	}
 
@@ -113,6 +113,7 @@ int main(int argc, char *argv[])
 	int nodes = atoi(argv[4]);
 	int seed = atoi(argv[5]);
 	int maxNumRelayingperBeacon = atoi(argv[6]);
+	int PutRelayPacketFront = atoi(argv[7]);
 
 	HumbleSim sim;
 
@@ -120,7 +121,7 @@ int main(int argc, char *argv[])
 
 	//sim.Seed=(long int)6*rand();
 	sim.StopTime(simTime);
-	sim.Setup(nodes,seed,collectTraces,isRelayingEnabled, maxNumRelayingperBeacon);
+	sim.Setup(nodes,seed,collectTraces,isRelayingEnabled, maxNumRelayingperBeacon,PutRelayPacketFront);
 	sim.Run();
 
 	return(0);
