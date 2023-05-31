@@ -30,7 +30,7 @@ void Logger :: Start()
         fileResults = fopen(filenameResults, "a");
     } else {  // File does not exist, open in write mode and write header
         fileResults = fopen(filenameResults, "w");
-        fprintf(fileResults,"Seed,App,ID,PosX,PosY,BeacTX,BeacRX,PingTX,PingRX,DataTX,DataRX,IsolTX,RelayTX,Dropped,averageLatency\n");
+        fprintf(fileResults,"Seed,App,ID,PosX,PosY,BeacTX,BeacRX,PingTX,PingRX,DataTX,DataRX,IsolTX,RelayTX,Dropped,AverageLatency\n");
     }
     fclose(fileResults);
 };
