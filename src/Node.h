@@ -4,6 +4,7 @@
 #include <stdio.h>      /* printf, NULL */
 #include <stdlib.h>     /* srand, rand */
 #include <time.h>       /* time */
+#include "FIFO.h"
 
 // Packet types
 #define BEACON 0
@@ -39,6 +40,7 @@ component Node : public TypeII
 		float positionX;
 		float positionY;
 		Packet NewPacket(int type); //create new packet
+		int PutRelayPacketFront; //to put the relaying packet in front of the queue
 
 	private:
 		char msg[500];
@@ -58,7 +60,17 @@ component Node : public TypeII
 		int isolatedDataperNode;
 		int relayedData; // Transmitted data packets from relay node
 		//max relayed nodes
+		int aggregateDelay;
+		float averageLatency;
+		int Latency;
 
+
+	public:
+		FIFO queue;
+		double queueSize;
+		int droppedPackets;
+		double interarrivalTime;
+		double maxQueueSize;
 
 	public:
 		// Connections
@@ -72,11 +84,13 @@ component Node : public TypeII
 		Timer <trigger_t> ping; // Triggers the transmission of the next Ping
 		Timer <trigger_t> data; // Triggers the transmission of the next Data packet
 		Timer <trigger_t> sense; // Triggers channel sensing
+		Timer <trigger_t> generate; // Triggers the generation of a new Data packet
 
 		inport void Beacon(trigger_t& t1);
 		inport void Ping(trigger_t& t2);
 		inport void Data(trigger_t& t3);
 		inport void Sense(trigger_t& t4);
+		inport void Generate(trigger_t& t5);
 
 		Node()
 		{
@@ -84,6 +98,7 @@ component Node : public TypeII
 			connect ping.to_component,Ping;
 			connect data.to_component,Data;
 			connect sense.to_component,Sense;
+			connect generate.to_component,Generate;
 		}
 };
 
@@ -95,6 +110,11 @@ void Node :: Start()
 	myRelayedNode = 0;
 	myBackoff = 0.001; //backoff is that after a collision detection, the devices that were transmitting will transmit a jam signal to inform all hosts that a collision has occurred.
 	isConnected = 0; //all nodes are initially set as not connected
+
+	// Queue parameters!
+	droppedPackets = 0;
+	interarrivalTime = 60;
+	maxQueueSize = 10;
 
 	// Statistics!
 	transmittedBeacons = 0;
@@ -113,13 +133,19 @@ void Node :: Start()
 	if (isGateway) {
 		superframe.Set(SimTime()); // Start running!
 	}
+	else {
+		generate.Set(SimTime()); // Start generating packets!
+	}
 };
 
 void Node :: Stop()
 {
 	//print Statistics
-	printf("%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n",seed,nodes,id,(int)positionX,(int)positionY,transmittedBeacons,receivedBeacons,transmittedPings,receivedPings,transmittedData,receivedData,isolatedData,relayedData);
-	sprintf(msg,"%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d",seed,nodes,id,(int)positionX,(int)positionY,transmittedBeacons,receivedBeacons,transmittedPings,receivedPings,transmittedData,receivedData,isolatedData,relayedData);
+	if(receivedData>0){
+		averageLatency = aggregateDelay/receivedData;
+	}
+	printf("%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%f\n",seed,nodes,id,(int)positionX,(int)positionY,transmittedBeacons,receivedBeacons,transmittedPings,receivedPings,transmittedData,receivedData,isolatedData,relayedData,droppedPackets,averageLatency);
+	sprintf(msg,"%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d",seed,nodes,id,(int)positionX,(int)positionY,transmittedBeacons,receivedBeacons,transmittedPings,receivedPings,transmittedData,receivedData,isolatedData,relayedData,droppedPackets,aggregateDelay);
 	Result(msg);
 };
 
@@ -155,38 +181,58 @@ void Node :: Ping(trigger_t &){
 // Transmission of a Data packet.
 // Note that this is triggered by a Timer.
 void Node :: Data(trigger_t &){
-	Packet packet = NewPacket(DATA);
-	if (myRelayNode != 0) {	//If I have a RelayNode
-		packet.destination = myRelayNode; //destinatio is the Relay
-		myRelayNode = 0;
-		isolatedData++;
 
-	} else if (myRelayedNode != 0) { // If I am the relay of another node
-		packet.relayed = myRelayedNode;
-		myRelayedNode = 0;
+	if (queue.QueueSize() > 0) {
 
-		if(isolatedDataperNode < maxNumRelayingperBeacon){ // I relay maxNumRelayingperBeacon then I stop tranmitting
-			isolatedDataperNode++;
-			relayedData++;
-			sprintf(msg,"%f - Node %d: My isolated Data per Node is %d.",SimTime(),id,isolatedDataperNode);
-			if (collectTraces) Trace(msg);
+		Packet packet = queue.GetFirstPacket();
+		queue.DelFirstPacket(); // Delete this packet from the queue!
+
+		if (myRelayNode != 0) {	//If I have a RelayNode
+			packet.destination = myRelayNode; //destinatio is the Relay
+			myRelayNode = 0;
+			isolatedData++;
+
 		}
-		else{ // When I have relayed maxNumRelayingperBeacon then I stop tranmitting and set Relay Node Flag to 0
-			RelayNodeIsEnable = 0; //resets relaying again = 0;
-		}
+		//packet.ableToRelay = RelayNodeIsEnable; //0 if the Node is not able to relay more packets.
+		Tx(packet);
+		transmittedData++;
+
+		sprintf(msg,"%f - Node %d: I transmitted a Data packet to Node %d.",SimTime(),id,packet.destination);
+		if (collectTraces) Trace(msg);
 	}
-	packet.ableToRelay = RelayNodeIsEnable; //0 if the Node is not able to relay more packets.
-
-	Tx(packet);
-	transmittedData++;
-
-	sprintf(msg,"%f - Node %d: I transmitted a Data packet to Node %d.",SimTime(),id,packet.destination);
-	if (collectTraces) Trace(msg);
+	else {
+		sprintf(msg,"%f - Node %d: There are no buffered packets. :(",SimTime(),id);
+		if (collectTraces) Trace(msg);
+	}
 };
 
 void Node :: Sense(trigger_t &){
 	Packet packet = NewPacket(SENSE);
 	Tx(packet);
+}
+
+void Node :: Generate(trigger_t &){
+
+	Packet packet = NewPacket(DATA);
+
+	// Decide if the packet should be buffered or dropped
+	if (queue.QueueSize() < maxQueueSize)
+	{
+		queueSize += queue.QueueSize(); // Check this again!
+		queue.PutPacket(packet);
+
+		sprintf(msg,"%f - Node %d: I added a packet to the buffer.",SimTime(),id);
+		if (collectTraces) Trace(msg);
+	}
+	else
+	{
+		droppedPackets++;
+
+		sprintf(msg,"%f - Node %d: I dropped a packet.",SimTime(),id);
+		if (collectTraces) Trace(msg);
+	}
+
+	generate.Set(SimTime()+Exponential(interarrivalTime));
 }
 
 // This function filters the received packets.
@@ -227,14 +273,39 @@ void Node :: Rx(Packet &packet)
 				else {
 					if (packet.type == DATA){
 						receivedData++;
+						aggregateDelay += SimTime() - packet.timestamp;
 						sprintf(msg,"%f - Node %d: I received a Data packet from Node %d.",SimTime(),id,packet.source);
 						if (collectTraces) Trace(msg);
 
 						// Packet needs relaying to GW
 						if (id != 0 && packet.destination == id && isConnected && RelayNodeIsEnable == 1){ // Check conditions to relay
 							myRelayedNode = packet.source;
+							if (myRelayedNode != 0) { // If I am the relay of another node
+								packet.relayed = myRelayedNode;
+								myRelayedNode = 0;
+
+								if(isolatedDataperNode < maxNumRelayingperBeacon){ // I relay maxNumRelayingperBeacon then I stop tranmitting
+									isolatedDataperNode++;
+									relayedData++;
+									sprintf(msg,"%f - Node %d: My isolated Data per Node is %d.",SimTime(),id,isolatedDataperNode);
+									if (collectTraces) Trace(msg);
+								}
+								else{ // When I have relayed maxNumRelayingperBeacon then I stop tranmitting and set Relay Node Flag to 0
+									RelayNodeIsEnable = 0; //resets relaying again = 0;
+								}
+							}
+							packet.ableToRelay = RelayNodeIsEnable; //0 if the Node is not able to relay more packets.
+							if(PutRelayPacketFront){
+								queue.PutPacketFront(packet);
+							}
+							else{
+								queue.PutPacket(packet);
+							}
+
+							queue.PutPacket(packet);
 							sprintf(msg,"%f - Node %d: I received a Data packet from Node %d and I will forward it to the GW. [relaying]",SimTime(),id,packet.source);
 							if (collectTraces) Trace(msg);
+
 							data.Set(SimTime()+Exponential(myBackoff));
 						}
 					}
