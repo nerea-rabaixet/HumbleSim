@@ -6,13 +6,15 @@ def plotLocations(myresults):
    df = pd.read_csv(myresults) # create a new dataframe
    print(df) # print the contents of the dataframe
 
+   plt.rc('font', family='sans serif', size=7)
+   plt.rcParams["figure.figsize"] = (3.487, 3.487/1)
+
    # A scatter plot
    ax = df.plot.scatter(x='PosX', y='PosY', alpha=0.5)
 
    for i, label in enumerate(df.ID):
       ax.annotate(label, (df.PosX.iat[i]+50, df.PosY.iat[i]-50))
 
-   plt.title('Node positions')
    plt.xlabel('x [m]')
    plt.ylabel('y [m]')
 
@@ -24,10 +26,11 @@ def plotResults(myresults):
    df = pd.read_csv(myresults) # create a new dataframe
    print(df) # print the contents of the dataframe
 
+   plt.rc('font', family='sans serif', size=7)
+   plt.rcParams["figure.figsize"] = (3.487, 3.487/2)
+
    # A bar plot
-   ax = df.plot.bar(x='ID', y={'DataTX','RelayTX','IsolTX'}, rot=0) # plot DataTX
-   #ax = df.plot.bar(x='ID', y={'RelayTX'}, rot=1) # plot DataTX
-   plt.title('My title')
+   ax = df.plot.bar(x='ID', y={'DataRX'}, rot=0) # plot DataRX
    plt.xlabel('Node ID')
    plt.ylabel('Packets')
 
