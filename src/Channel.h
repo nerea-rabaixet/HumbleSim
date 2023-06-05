@@ -84,7 +84,13 @@ void Channel :: In(Packet &packet){
 				airtime.Set(SimTime()+TX_HEADERS);
 				break;
 			case DATA:
-				airtime.Set(SimTime()+TX_UPLINK);
+				if(packet.aggregation == 1){
+					airtime.Set(SimTime()+2*TX_UPLINK);
+				}
+				else{
+					airtime.Set(SimTime()+TX_UPLINK);
+				}
+
 				break;
 		}
 	}
