@@ -21,4 +21,5 @@ struct Packet
 	int isBusy;
 	//is able to be a Relay
 	int ableToRelay;
+	int aggregation;
 };
