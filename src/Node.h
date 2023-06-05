@@ -144,8 +144,9 @@ void Node :: Stop()
 	if(receivedData>0){
 		averageLatency = aggregateDelay/receivedData;
 	}
+	Latency = floor(averageLatency);
 	printf("%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%f\n",seed,nodes,id,(int)positionX,(int)positionY,transmittedBeacons,receivedBeacons,transmittedPings,receivedPings,transmittedData,receivedData,isolatedData,relayedData,droppedPackets,averageLatency);
-	sprintf(msg,"%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d",seed,nodes,id,(int)positionX,(int)positionY,transmittedBeacons,receivedBeacons,transmittedPings,receivedPings,transmittedData,receivedData,isolatedData,relayedData,droppedPackets,aggregateDelay);
+	sprintf(msg,"%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%f",seed,nodes,id,(int)positionX,(int)positionY,transmittedBeacons,receivedBeacons,transmittedPings,receivedPings,transmittedData,receivedData,isolatedData,relayedData,droppedPackets,averageLatency);
 	Result(msg);
 };
 
@@ -285,22 +286,50 @@ void Node :: Rx(Packet &packet)
 								myRelayedNode = 0;
 
 								if(isolatedDataperNode < maxNumRelayingperBeacon){ // I relay maxNumRelayingperBeacon then I stop tranmitting
-									isolatedDataperNode++;
-									relayedData++;
-									sprintf(msg,"%f - Node %d: My isolated Data per Node is %d.",SimTime(),id,isolatedDataperNode);
-									if (collectTraces) Trace(msg);
+									if (queue.QueueSize() < maxQueueSize)
+									{
+										queueSize += queue.QueueSize(); // Check this again!
+										if(PutRelayPacketFront){
+											queue.PutPacketFront(packet);
+										}
+
+										else{
+											queue.PutPacket(packet);
+										}
+										isolatedDataperNode++;
+										relayedData++;
+										sprintf(msg,"%f - Node %d: My isolated Data per Node is %d.",SimTime(),id,isolatedDataperNode);
+										if (collectTraces) Trace(msg);
+										sprintf(msg,"%f - Node %d: I added a packet to the buffer Relay Packet.",SimTime(),id);
+										if (collectTraces) Trace(msg);
+									}
+									else
+									{
+										if(PutRelayPacketFront){
+											queue.PutPacketFront(packet);
+											isolatedDataperNode++;
+											relayedData++;
+											sprintf(msg,"%f - Node %d: My isolated Data per Node is %d.",SimTime(),id,isolatedDataperNode);
+											if (collectTraces) Trace(msg);
+											sprintf(msg,"%f - Node %d: I added a packet to the buffer Relay Packet.",SimTime(),id);
+											if (collectTraces) Trace(msg);
+										}
+										else{
+											droppedPackets++;
+											sprintf(msg,"%f - Node %d: I dropped a packet.",SimTime(),id);
+											if (collectTraces) Trace(msg);
+										}
+
+									}
+
 								}
 								else{ // When I have relayed maxNumRelayingperBeacon then I stop tranmitting and set Relay Node Flag to 0
 									RelayNodeIsEnable = 0; //resets relaying again = 0;
 								}
 							}
 							packet.ableToRelay = RelayNodeIsEnable; //0 if the Node is not able to relay more packets.
-							if(PutRelayPacketFront){
-								queue.PutPacketFront(packet);
-							}
-							else{
-								queue.PutPacket(packet);
-							}
+
+
 
 							queue.PutPacket(packet);
 							sprintf(msg,"%f - Node %d: I received a Data packet from Node %d and I will forward it to the GW. [relaying]",SimTime(),id,packet.source);
