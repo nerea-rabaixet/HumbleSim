@@ -54,6 +54,7 @@ component Node : public TypeII
 		int receivedBeacons;
 		int receivedPings;
 		int receivedData;
+		int aggregationPacket;
 		//relaying info
 		int busyretry; // retries of sensing, set to 0 when it is finaly transmited
 		int isolatedData; // Transmitted data packets from relayed node
@@ -126,6 +127,7 @@ void Node :: Start()
 	isolatedData = 0;
 	isolatedDataperNode = 0;
 	relayedData = 0;
+	aggregationPacket = 0;
 
 	sprintf(msg,"%f - Node %d: My coordinates are (%f,%f).",SimTime(),id,positionX,positionY);
 	if (collectTraces) Trace(msg);
@@ -145,8 +147,8 @@ void Node :: Stop()
 		averageLatency = aggregateDelay/receivedData;
 	}
 	Latency = floor(averageLatency);
-	printf("%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%f\n",seed,nodes,id,(int)positionX,(int)positionY,transmittedBeacons,receivedBeacons,transmittedPings,receivedPings,transmittedData,receivedData,isolatedData,relayedData,droppedPackets,averageLatency);
-	sprintf(msg,"%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%f",seed,nodes,id,(int)positionX,(int)positionY,transmittedBeacons,receivedBeacons,transmittedPings,receivedPings,transmittedData,receivedData,isolatedData,relayedData,droppedPackets,averageLatency);
+	printf("%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%f\t%d\n",seed,nodes,id,(int)positionX,(int)positionY,transmittedBeacons,receivedBeacons,transmittedPings,receivedPings,transmittedData,receivedData,isolatedData,relayedData,droppedPackets,averageLatency,aggregationPacket);
+	sprintf(msg,"%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%f,%d",seed,nodes,id,(int)positionX,(int)positionY,transmittedBeacons,receivedBeacons,transmittedPings,receivedPings,transmittedData,receivedData,isolatedData,relayedData,droppedPackets,averageLatency,aggregationPacket);
 	Result(msg);
 };
 
@@ -188,7 +190,7 @@ void Node :: Data(trigger_t &){
 		Packet packet = queue.GetFirstPacket();
 		queue.DelFirstPacket(); // Delete this packet from the queue!
 
-		if (myRelayNode != 0) {	//If I have a RelayNode
+		if (myRelayNode != 0) {	//If I have a RelayNode I'm Isolated
 			packet.destination = myRelayNode; //destinatio is the Relay
 			myRelayNode = 0;
 			isolatedData++;
@@ -277,7 +279,11 @@ void Node :: Rx(Packet &packet)
 						aggregateDelay += SimTime() - packet.timestamp;
 						sprintf(msg,"%f - Node %d: I received a Data packet from Node %d.",SimTime(),id,packet.source);
 						if (collectTraces) Trace(msg);
-
+						if(packet.aggregation){
+							receivedData++;
+							sprintf(msg,"%f - Node %d: I received a an aggregation Data packet from Node %d.",SimTime(),id,packet.source);
+							if (collectTraces) Trace(msg);
+						}
 						// Packet needs relaying to GW
 						if (id != 0 && packet.destination == id && isConnected && RelayNodeIsEnable == 1){ // Check conditions to relay
 							myRelayedNode = packet.source;
@@ -290,9 +296,12 @@ void Node :: Rx(Packet &packet)
 									{
 										queueSize += queue.QueueSize(); // Check this again!
 										if(PutRelayPacketFront){
-											queue.PutPacketFront(packet);
+											Packet packet_agg = queue.GetFirstPacket();
+											packet_agg.aggregation=1;
+											packet_agg.source_agg = packet.source; // add source of isolated in aggregation packet
+											aggregationPacket++;
+											queue.PutPacketFront(packet_agg);
 										}
-
 										else{
 											queue.PutPacket(packet);
 										}
@@ -306,7 +315,11 @@ void Node :: Rx(Packet &packet)
 									else
 									{
 										if(PutRelayPacketFront){
-											queue.PutPacketFront(packet);
+											Packet packet_agg = queue.GetFirstPacket();
+											packet_agg.aggregation=1;
+											packet_agg.source_agg = packet.source; // add source of isolated in aggregation packet
+											aggregationPacket++;
+											queue.PutPacketFront(packet_agg);
 											isolatedDataperNode++;
 											relayedData++;
 											sprintf(msg,"%f - Node %d: My isolated Data per Node is %d.",SimTime(),id,isolatedDataperNode);
@@ -403,6 +416,7 @@ Packet Node :: NewPacket(int type) {
 			packet.type = DATA;
 			packet.timestamp = SimTime();
 			packet.ableToRelay = 1;
+			packet.aggregation = 0;
 			break;
 		case SENSE:
 			packet.seq = 0;
