@@ -1,135 +1,128 @@
-/*
-	A humble wireless channel
-*/
+#include <iostream>
+#include <random>
 
-// Packet types
-#define BEACON 0
-#define PING 1
-#define DATA 2
-#define SENSE 3
+#include "./COST/cost.h"
+#include "Node.h"
+#include "Channel.h"
+#include "Packet.h"
+#include "Logger.h"
 
-// Airtime (SF9/125kHz)
-// https://avbentem.github.io/airtime-calculator/ttn/eu868
-#define TX_HEADERS 1649E-4 // TX time for 13 Bytes (only headers) in seconds
-#define TX_UPLINK 2058E-4 // TX time of 25 Bytes (headers and payload) in seconds
+using namespace std;
 
-component Channel : public TypeII
+component HumbleSim : public CostSimEng
 {
 	public:
-		void Start();
+		void Setup(int nodes, int seed, int collectTraces, int isRelayingEnabled, int maxNumRelayingperBeacon, int PutRelayPacketFront);
 		void Stop();
+		void Start();
+
+	public:
+		Channel channel;
+		Node [] node;
+		Logger log;
 
 	private:
+		int sizeX;
+		int sizeY;
 		char msg[500];
-		int isActive;  // It can be 0 or 1!
+};
 
-	public:
-		int nodes;
-		float *nodePositionX;
-		float *nodePositionY;
-		Packet currentPacket;
-		int threshold;
-		int collectTraces;
+void HumbleSim:: Setup(int nodes, int seed, int collectTraces, int isRelayingEnabled,int maxNumRelayingperBeacon, int PutRelayPacketFront)
+{
+	node.SetSize(nodes);
+
+	channel.Out.SetSize(nodes);
+	channel.nodes = nodes;
+	channel.nodePositionX = new float [nodes];
+	channel.nodePositionY = new float [nodes];
+	channel.threshold = 2500; // in meters
+	channel.collectTraces = collectTraces;
+
+	// Connection
+	connect channel.Trace,log.Trace;
+
+	// Setup End Devices
+	for(int i=0;i<nodes;i++)
+	{
+		sizeX = 5000; // in meters
+		sizeY = 5000; // in meters
+
+		//random_device rand_dev;
+		//mt19937 generator(rand_dev());
+		mt19937 generator(seed*i);
+		uniform_int_distribution<int> distrX(0, sizeX);
+		uniform_int_distribution<int> distrY(0, sizeY);
+
+		float positionX = distrX(generator);
+		float positionY = distrY(generator);
+
+		node[i].id = i;
+		node[i].isGateway = 0;
+		node[i].nodes = nodes;
+		node[i].positionX = positionX;
+		node[i].positionY = positionY;
+		node[i].collectTraces = collectTraces;
+		node[i].isRelayingEnabled = isRelayingEnabled;
+		node[i].PutRelayPacketFront = PutRelayPacketFront;
+		node[i].seed = seed;
+		node[i].application = isRelayingEnabled;
+		node[i].maxNumRelayingperBeacon = maxNumRelayingperBeacon;
+
+		channel.nodePositionX[i] = positionX;
+		channel.nodePositionY[i] = positionY;
 
 		// Connections
-		inport void In(Packet &packet);
-		outport [] void Out(Packet &packet);
-		outport void Trace(char* msg);
-
-		// Timers
-		Timer <trigger_t> airtime;
-		Timer <trigger_t> collision;
-		inport void Travel(trigger_t& t1);
-		inport void DeactivateChannel(trigger_t& t1);
-
-		Channel()
-		{
-			connect airtime.to_component,Travel;
-			connect collision.to_component,DeactivateChannel;
-		}
-};
-
-void Channel :: Start()
-{
-	isActive = 0;
-};
-
-void Channel :: Stop()
-{
-	delete [] nodePositionX;
-	delete [] nodePositionY;
-};
-
-// We take into account the airtime of a packet and schedule a timer to decide what to do.
-// Please note that we do not allow any simultaneous transmissions in our channel!
-void Channel :: In(Packet &packet){
-	if (packet.type == SENSE) {
-		if(isActive) {
-			packet.isBusy = 1;
-		}
-		else {
-			packet.isBusy = 0;
-		}
-		Out[packet.source](packet);
-	}
-	else if (!isActive) { // We make sure that the channel is not active
-		isActive = 1; // We set the channel as active!
-		currentPacket = packet;
-
-		switch(packet.type) {
-			case BEACON:
-				airtime.Set(SimTime()+TX_HEADERS);
-				break;
-			case PING:
-				airtime.Set(SimTime()+TX_HEADERS);
-				break;
-			case DATA:
-				if(packet.aggregation == 1){
-					airtime.Set(SimTime()+2*TX_UPLINK);
-				}
-				else{
-					airtime.Set(SimTime()+TX_UPLINK);
-				}
-
-				break;
-		}
-	}
-	else {
-		airtime.Cancel();
-		sprintf(msg, "%f - Channel: Node %d caused a collision!", SimTime(),packet.source);
-		if (collectTraces) Trace(msg);
-		collision.Set(SimTime()+TX_UPLINK);
-	}
-};
-
-// We allow a packet to travel to a node if the distance is less than a threshold.
-// Note that this is triggered by a Timer.
-void Channel :: Travel(trigger_t& t1)
-{
-	float distance;
-	int source = currentPacket.source;
-
-	for(int i=0;i<nodes;i++) {
-		// We use the pythagorean theorem to calculate the distance of two points in 2D space.
-		distance = sqrt(pow(nodePositionX[i]-nodePositionX[source],2) + pow(nodePositionY[i]-nodePositionY[source],2));
-
-		if (distance < threshold) {
-			Out[i](currentPacket); // So, we allow the packet to travel!
-		}
-		else {
-			// The node is not reachable.
-			sprintf(msg, "%f - Channel: Node %d is out of range!", SimTime(), i);
-			if (collectTraces) Trace(msg);
-		}
+		connect node[i].Tx,channel.In;
+		connect channel.Out[i],node[i].Rx;
+		connect node[i].Trace,log.Trace;
+		connect node[i].Result,log.Result;
 	}
 
-	isActive = 0; // Now the channel is inactive again!
-
+	// Setup Gateway
+	node[0].isGateway = 1;
+	node[0].nodes = nodes;
+	node[0].seed = seed;
+	node[0].positionX = sizeX/2;
+	node[0].positionY = sizeY/2;
+	channel.nodePositionX[0] = sizeX/2;
+	channel.nodePositionY[0] = sizeY/2;
 };
 
-// This function deactivates the channel.
-// Note that this is triggered by a Timer.
-void Channel :: DeactivateChannel(trigger_t& t1)
+void HumbleSim:: Start()
 {
-	isActive = 0;
+	printf("--- Started ---------------------------------------------------------------\n");
+	printf("Seed\tApp\tID\tPosX\tPosY\tBeacTX\tBeacRX\tPingTX\tPingRX\tDataTX\tDataRX\tIsolTX\tRelayTX\tDropped\tAverageLatency\tAggregatedPacket\n");
+};
+
+void HumbleSim:: Stop()
+{
+	printf("--- Finished --------------------------------------------------------------\n");
+};
+
+int main(int argc, char *argv[])
+{
+	if(argc < 8)
+	{
+		printf("./HumbleSim simTime collectTraces isRelayingEnabled nodes seed maxNumRelayingperBeacon PutRelayPacketFront\n");
+		return 0;
+	}
+
+	double simTime = atof(argv[1]);
+	int collectTraces = atoi(argv[2]);
+	int isRelayingEnabled = atoi(argv[3]);
+	int nodes = atoi(argv[4]);
+	int seed = atoi(argv[5]);
+	int maxNumRelayingperBeacon = atoi(argv[6]);
+	int PutRelayPacketFront = atoi(argv[7]);
+
+	HumbleSim sim;
+
+	printf("--- Humble LoRaWAN Simulator ----------------------------------------------\n");
+
+	//sim.Seed=(long int)6*rand();
+	sim.StopTime(simTime);
+	sim.Setup(nodes,seed,collectTraces,isRelayingEnabled, maxNumRelayingperBeacon,PutRelayPacketFront);
+	sim.Run();
+
+	return(0);
 };
