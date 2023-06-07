@@ -12,6 +12,7 @@ struct Packet
 	int type;
 	int relayed;
 
+
 	// Payload
 	double timestamp;
 	int payload;
@@ -21,5 +22,7 @@ struct Packet
 	int isBusy;
 	//is able to be a Relay
 	int ableToRelay;
+	//agregation packet
 	int aggregation;
+	int source_agg;
 };
