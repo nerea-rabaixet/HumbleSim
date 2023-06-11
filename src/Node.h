@@ -147,8 +147,8 @@ void Node :: Stop()
 		averageLatency = aggregateDelay/receivedData;
 	}
 	Latency = floor(averageLatency);
-	printf("%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%f\t%d\n",seed,nodes,id,(int)positionX,(int)positionY,transmittedBeacons,receivedBeacons,transmittedPings,receivedPings,transmittedData,receivedData,isolatedData,relayedData,droppedPackets,averageLatency,aggregationPacket);
-	sprintf(msg,"%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%f,%d",seed,nodes,id,(int)positionX,(int)positionY,transmittedBeacons,receivedBeacons,transmittedPings,receivedPings,transmittedData,receivedData,isolatedData,relayedData,droppedPackets,averageLatency,aggregationPacket);
+	printf("%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%f\n",seed,nodes,id,(int)positionX,(int)positionY,transmittedBeacons,receivedBeacons,transmittedPings,receivedPings,transmittedData,receivedData,isolatedData,relayedData,droppedPackets,averageLatency);
+	sprintf(msg,"%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%f",seed,nodes,id,(int)positionX,(int)positionY,transmittedBeacons,receivedBeacons,transmittedPings,receivedPings,transmittedData,receivedData,isolatedData,relayedData,droppedPackets,averageLatency);
 	Result(msg);
 };
 
@@ -285,7 +285,7 @@ void Node :: Rx(Packet &packet)
 							if (collectTraces) Trace(msg);
 						}
 						// Packet needs relaying to GW
-						if (id != 0 && packet.destination == id && isConnected && RelayNodeIsEnable == 1){ // Check conditions to relay
+						else if (id != 0 && packet.destination == id && isConnected && RelayNodeIsEnable == 1){ // Check conditions to relay
 							myRelayedNode = packet.source;
 							if (myRelayedNode != 0) { // If I am the relay of another node
 								packet.relayed = myRelayedNode;
@@ -300,6 +300,7 @@ void Node :: Rx(Packet &packet)
 											packet_agg.aggregation=1;
 											packet_agg.source_agg = packet.source; // add source of isolated in aggregation packet
 											aggregationPacket++;
+											queue.DelFirstPacket();
 											queue.PutPacketFront(packet_agg);
 										}
 										else{
