@@ -4,7 +4,7 @@ The simulation reproduces the behavior of a Class B LoRaWAN network system with 
 Our simulation is focused on medium access control (MAC) We set an area where the area is 5000 x 5000 meters. It randomly generates the positions of the nodes in a 5x5 km area and we put the Gateway to the center of the square space. The gateway threashold is set to 2,5km.
 
 ## Compile: 
-  !mypath="drive/MyDrive/TFG"; cd $mypath/HumbleSim; chmod +x build_local COST/cxx; LD_PRELOAD= ./build_local
+  chmod +x build_local COST/cxx; LD_PRELOAD= ./build_local
 
 ## Run:
   ./HumbleSim 3600 1 10 666 1
