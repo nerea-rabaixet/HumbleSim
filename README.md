@@ -8,4 +8,5 @@ Our simulation is focused on medium access control (MAC) We set an area where th
 
 ## Run:
   ./HumbleSim 3600 1 10 666 1
+  
   As input values we have: Sim time, relaying enabler, number of nodes, seed and packet aggregation enabler
