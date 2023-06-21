@@ -1,3 +1,6 @@
+/*
+	Authors: Nerea Rabaixet and Costas Michaelides
+*/
 #include <iostream>
 #include <random>
 
