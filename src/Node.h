@@ -1,5 +1,6 @@
 /*
 	A humble node
+ 	Authors: Nerea Rabaixet and Costas Michaelides
 */
 #include <stdio.h>      /* printf, NULL */
 #include <stdlib.h>     /* srand, rand */
