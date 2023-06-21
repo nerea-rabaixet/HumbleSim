@@ -1,5 +1,6 @@
 /*
 	A humble logger
+ 	Authors: Nerea Rabaixet and Costas Michaelides
 */
 
 component Logger : public TypeII
