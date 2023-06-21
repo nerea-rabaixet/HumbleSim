@@ -1,5 +1,6 @@
 /*
 	A humble packet
+ 	Authors: Nerea Rabaixet and Costas Michaelides
 */
 
 // This is the basic structure of a packet.
