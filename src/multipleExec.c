@@ -1,3 +1,7 @@
+/*
+    Multiple executions for HumbleSim
+    Authors: Nerea Rabaixet and Costas Michaelides
+*/
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
