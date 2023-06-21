@@ -1,5 +1,6 @@
 /*
 	A humble wireless channel
+ 	Authors: Nerea Rabaixet and Costas Michaelides
 */
 
 // Packet types
