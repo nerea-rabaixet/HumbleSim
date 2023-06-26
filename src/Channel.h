@@ -1,7 +1,11 @@
-/*
-	A humble wireless channel
- 	Authors: Nerea Rabaixet and Costas Michaelides
-*/
+
+// A humble wireless channel
+// Copyright (c) 2023, Universitat Pompeu Fabra.
+//
+// This file is provided "as is" without warranty of any kind. Please see the file LICENCE for more details.
+//
+// Authors: Nerea Rabaixet and Costas Michaelides
+// Date: 2023-6-26
 
 // Packet types
 #define BEACON 0
