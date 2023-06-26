@@ -1,7 +1,11 @@
-/*
-	A humble node
- 	Authors: Nerea Rabaixet and Costas Michaelides
-*/
+
+// A humble node
+// Copyright (c) 2023, Universitat Pompeu Fabra.
+//
+// This file is provided "as is" without warranty of any kind. Please see the file LICENCE for more details.
+//
+// Authors: Nerea Rabaixet and Costas Michaelides
+// Date: 2023-6-26
 #include <stdio.h>      /* printf, NULL */
 #include <stdlib.h>     /* srand, rand */
 #include <time.h>       /* time */
