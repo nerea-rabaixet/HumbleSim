@@ -1,8 +1,8 @@
 cff-version: 1.2.0
-message: "If you use this software, please cite it as below."
+message: "If you use this code, please cite it as below."
 authors:
-  - family-names: Rabaixet
-    given-names: Nerea
+  - family-names: Rabaixet, Michaelides
+    given-names: Nerea, Costas
     orcid: https://orcid.org/1234-5678-9101-1121
 title: "HumbleSim"
 version: 2.0.4
